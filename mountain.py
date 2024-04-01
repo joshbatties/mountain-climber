@@ -5,5 +5,5 @@ from dataclasses import dataclass
 class Mountain:
 
     name: str
-    difficulty_level: int
+    difficulty: int
     length: int

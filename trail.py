@@ -4,8 +4,7 @@ from dataclasses import dataclass
 from mountain import Mountain
 
 from typing import TYPE_CHECKING, Union
-
-from data_structures.linked_stack import *
+from personality import PersonalityDecision
 
 
 # Avoid circular imports for typing.
@@ -82,7 +81,20 @@ TrailStore = Union[TrailSplit, TrailSeries, None]
 class Trail:
 
     store: TrailStore = None
-
+    def collect_all_mountains(self) -> list[Mountain]:
+        mountains = []
+        stack = [self]
+        while stack:
+            trail = stack.pop()
+            if isinstance(trail.store, TrailSeries):
+                mountains.append(trail.store.mountain)
+                stack.append(trail.store.following)
+            elif isinstance(trail.store, TrailSplit):
+                stack.append(trail.store.following)
+                stack.append(trail.store.top)
+                stack.append(trail.store.bottom)
+        return mountains
+    
     def add_mountain_before(self, mountain: Mountain) -> Trail:
         """
         Returns a *new* trail which would be the result of:
@@ -98,28 +110,21 @@ class Trail:
         return Trail(TrailSplit(Trail(None), Trail(None), self))
 
     def follow_path(self, personality: WalkerPersonality) -> None:
-        """Follow a path and add mountains according to a personality."""
-    
-
-        from personality import PersonalityDecision
-        stack = LinkedStack()
-        stack.push(self)
-
-        while not stack.is_empty():
-            current = stack.pop()
-            if isinstance(current.store, TrailSeries):
-                personality.add_mountain(current.store.mountain)
-                stack.push(current.store.following)
-            elif isinstance(current.store, TrailSplit):
-                stack.push(current.store.following)
-                selected_branch = personality.select_branch(current.store.top, current.store.bottom)
-                if selected_branch == PersonalityDecision.STOP:
-                    return
-                elif selected_branch == PersonalityDecision.TOP:
-                    stack.push(current.store.top)
-                elif selected_branch == PersonalityDecision.BOTTOM:
-                    stack.push(current.store.bottom)
-
+        stack = [self]
+        while stack:
+            trail = stack.pop()
+            if trail.store is None:
+                continue
+            if isinstance(trail.store, TrailSeries):
+                personality.add_mountain(trail.store.mountain)
+                stack.append(trail.store.following)
+            elif isinstance(trail.store, TrailSplit):
+                stack.append(trail.store.following)
+                decision = personality.select_branch(trail.store.top, trail.store.bottom)
+                if decision == PersonalityDecision.TOP:
+                    stack.append(trail.store.top)
+                elif decision == PersonalityDecision.BOTTOM:
+                    stack.append(trail.store.bottom)
 
 
 
